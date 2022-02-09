@@ -15,7 +15,9 @@
             homeLocation: '/home',
             loginUrl: '/idp',
             logoutUrl: '/idp/logout',
-            userInfoUrl: '/idp/auth/me'
+            userInfoUrl: '/idp/auth/me',
+            updateSessionUrl: '/idp/sso/update',
+            authorizeApplicationUrl: '/idp/sso/authorize/application'
         };
 
         this.$get = function() {

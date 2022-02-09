@@ -1,4 +1,4 @@
-(function() {
+(function () {
     'use strict';
     angular
         .module('dyn.auth')
@@ -54,11 +54,13 @@
             logout: logout,
             getCurrentUser: getCurrentUser,
             isLoggedIn: isLoggedIn,
-            hasRole: hasRole,
-            hasSomeRole: hasSomeRole,
+            hasProfile: hasProfile,
+            hasSomeProfile: hasSomeProfile,
             getUrlLogin: getUrlLogin,
             hasValidCredentials: hasValidCredentials,
-            loadUserInfos: loadUserInfos
+            loadUserInfos: loadUserInfos,
+            updateSession: updateSession,
+            authorizeApplication: authorizeApplication
         };
 
         /**
@@ -67,7 +69,7 @@
          */
         function logout() {
             return $http.post(dynAuthConfig.logoutUrl)
-                .then(function(response) {
+                .then(function (response) {
                     delete $window.localStorage.token;
                     delete $window.localStorage.currentUserStr;
                     $cookies.remove('Authorization');
@@ -107,31 +109,31 @@
         }
 
         /**
-         * Valida se o usuário atual possui determina role.
-         * @param  {String}  role Role a ser verificada.
-         * @return {Boolean}      true caso o usuário tenha a role, false caso contrário.
+         * Valida se o usuário atual possui determino profile.
+         * @param  {String}  profile Profile a ser verificada.
+         * @return {Boolean}         true caso o usuário tenha o profile, false caso contrário.
          */
-        function hasRole(role) {
-            if (currentUser && !(currentUser.roles instanceof Array)) {
+        function hasProfile(profile) {
+            if (currentUser && !(currentUser.profiles instanceof Array)) {
                 return false;
             }
-            return isLoggedIn() && currentUser.roles.some(function(element) {
-                return element === role;
+            return isLoggedIn() && currentUser.profiles.some(function (element) {
+                return element === profile;
             });
         }
 
         /**
-         * Valida se o usuário possui alguma das roles especificadas.
-         * @param  {Array}      roles   Lista de roles a serem verificadas.
-         * @return {Boolean}            true caso o usuário tenha ao menos uma role, false caso contrário.
+         * Valida se o usuário possui alguma das profiles especificadas.
+         * @param  {Array}      profiles   Lista de profiles a serem verificadas.
+         * @return {Boolean}               true caso o usuário tenha ao menos uma profile, false caso contrário.
          */
-        function hasSomeRole(roles) {
-            if (!(roles instanceof Array)) {
-                $log.warn('[hasSomeRole] o parametro passado não é um Array');
+        function hasSomeProfile(profiles) {
+            if (!(profiles instanceof Array)) {
+                $log.warn('[hasSomeProfile] o parametro passado não é um Array');
                 return false;
             }
-            return roles.some(function(element) {
-                return hasRole(element.trim());
+            return profiles.some(function (element) {
+                return hasProfile(element.trim());
             });
         }
 
@@ -141,7 +143,7 @@
          */
         function hasValidCredentials() {
             var hasValidCredentials = checkUserCredentials();
-            return $q(function(resolve, reject) {
+            return $q(function (resolve, reject) {
                 if (hasValidCredentials) {
                     resolve(getUrlToRedirect(dynAuthConfig.homeLocation));
                 }
@@ -178,20 +180,48 @@
          */
         function loadUserInfos() {
             if (!$window.localStorage.token) {
-                return $q(function(resolve, reject) {
+                return $q(function (resolve, reject) {
                     reject(getUrlToRedirect(dynAuthConfig.loginUrl));
                 });
             }
             return $http.get(dynAuthConfig.userInfoUrl)
-                .then(function(response) {
+                .then(function (response) {
                     currentUser = response.data || {};
                     $window.localStorage.currentUserStr = JSON.stringify(currentUser);
                     broadcastChanges(AUTH_USER_CHANGED);
                     return getUrlToRedirect(dynAuthConfig.homeLocation);
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                     broadcastChanges(AUTH_USER_LOAD_INFO_FAILED);
                     return AUTH_USER_LOAD_INFO_FAILED;
+                });
+        }
+        
+        /**
+         * Atualiza a sessão do usuário atual no SSO.
+         * @return {Object} Promise da requisição.
+         */
+        function updateSession() {
+            return $http.post(dynAuthConfig.updateSessionUrl)
+                .then(function (response) {
+                    return response.data;
+                }).catch(function (error){
+                    return error;
+                });
+        }
+
+        /**
+         * Solicita autorização do SSO para acessar aplicação.
+         * @param  {String} app     Aplicação que deve solicitar autenticação
+         * 
+         * @return {Object}         Promise da requisição.
+         */
+        function authorizeApplication(app) {
+            return $http.post(dynAuthConfig.authorizeApplicationUrl, app)
+                .then(function (response) {
+                    return response.data;
+                }).catch(function (error){
+                    return error;
                 });
         }
 
